@@ -9,9 +9,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class WebHook {
 
 	public static void main(String[] args) throws IOException {
-		//Starting Ngrok
+		
 		ServerNgrok.run();
-		//Starting Spring
+		
 		SpringApplication.run(WebHook.class, args);
 	}
 

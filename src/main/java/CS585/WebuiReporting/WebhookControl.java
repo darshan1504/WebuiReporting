@@ -1,10 +1,19 @@
 package CS585.WebuiReporting;
 
 import java.awt.Desktop;
+import java.awt.Rectangle;
+import java.awt.Robot;
+import java.awt.Toolkit;
+import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+
+import javax.imageio.ImageIO;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -30,25 +39,22 @@ public class WebhookControl {
 	@ResponseBody
 	public WebHookRequest getPayload(@RequestBody Payload payload)
 			throws Exception {
+		System.setProperty("java.awt.headless", "false");
+		String ScreenShotFolderPath = "C:\\Screenshots\\";
 
-		// Get the repositry URL to clone the repository
 		Repository repo = (Repository) payload.getRepository();
 		String cloneURL = repo.getURL();
 
-		// Get the email of the committer to send test results
 		Head_commit commit = (Head_commit) payload.getHead_commit();
 		Committer committer = (Committer) commit.getCommitter();
 		String email = committer.getEmail();
 
-		// Clone the Github Repository
-		/* CloneRepo.run(cloneURL,email); */
 		File localPath = File.createTempFile("TestGitRepository", "");
 		if (!localPath.delete()) {
 			throw new IOException("Could not delete temporary file "
 					+ localPath);
 		}
 
-		// then clone
 		System.out.println("Cloning from " + cloneURL + " to " + localPath);
 		try (Git result = Git.cloneRepository().setURI(cloneURL)
 				.setDirectory(localPath).call()) {
@@ -56,10 +62,26 @@ public class WebhookControl {
 			Runtime runtime = Runtime.getRuntime();
 			runtime.exec("C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome -new-window "
 					+ localPath + "\\index.html");
-			ScreenCapture screenGrab = new ScreenCapture();
-			screenGrab.robo();
-			// Note: the call() returns an opened repository already which needs
-			// to be closed to avoid file handle leaks!
+
+			Thread.sleep(3000);
+
+			SimpleDateFormat formatter = new SimpleDateFormat(
+					"yyyyMMdd hh mm ss a");
+
+			Calendar now = Calendar.getInstance();
+			Robot robot = new Robot();
+			BufferedImage screenShot = new Robot()
+					.createScreenCapture(new Rectangle(Toolkit
+							.getDefaultToolkit().getScreenSize()));
+			ImageIO.write(screenShot, "JPG", new File(ScreenShotFolderPath
+					+ formatter.format(now.getTime()) + ".jpg"));
+			String img = ScreenShotFolderPath + formatter.format(now.getTime())
+					+ ".jpg";
+			System.out.println(formatter.format(now.getTime()));
+			
+
+			Sendemailto.To(email, img);
+
 			System.out.println("Having repository: "
 					+ result.getRepository().getDirectory());
 			result.close();
@@ -67,4 +89,5 @@ public class WebhookControl {
 		}
 		return new WebHookRequest();
 	}
+
 }
